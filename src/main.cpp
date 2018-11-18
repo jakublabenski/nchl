@@ -12,8 +12,15 @@
 
 #include <Adafruit_NeoPixel.h>
 
+#include <array>
+
 const int TRIGGER_PIN = D0;
-const int LIGHTS_PIN = D6;
+const int LIGHTS_PIN = D4;
+
+constexpr int number_of_leds = 7;
+using Colors = std::array<uint32_t, number_of_leds>;
+using ColorVector = std::vector<uint32_t>;
+Colors colors;
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -23,7 +30,7 @@ const int LIGHTS_PIN = D6;
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(50, LIGHTS_PIN, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(number_of_leds, LIGHTS_PIN, NEO_GRB + NEO_KHZ800);
 
 Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, D2, NEO_GRB + NEO_KHZ800);
 
@@ -33,7 +40,7 @@ Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, D2, NEO_GRB + NEO_KHZ800);
 // on a live circuit...if you must, connect GND first.
 
 struct Storage {
-    int32_t color;
+    uint32_t color;
 } storage;
 
 void configureWiFi()
@@ -152,6 +159,41 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
     }
 }
 
+void setUpColors(Colors& colors, const ColorVector& set)
+{
+    int idx = 0;
+    for (auto& element : colors) {
+        element = set[idx % set.size()];
+        ++idx;
+    }
+}
+
+void setUpRainbow(Colors& colors)
+{
+    ColorVector rainbow = {
+        strip.Color(255, 0, 0),
+        strip.Color(255, 127, 0),
+        strip.Color(255, 255, 0),
+        strip.Color(0, 255, 0),
+        strip.Color(0, 0, 255),
+        strip.Color(75, 0, 255),
+        strip.Color(143, 0, 255),
+    };
+
+    setUpColors(colors, rainbow);
+}
+
+void setUpRGB(Colors& colors)
+{
+    ColorVector rgb = {
+        strip.Color(255, 0, 0),
+        strip.Color(0, 255, 0),
+        strip.Color(0, 0, 255),
+    };
+
+    setUpColors(colors, rgb);
+}
+
 void setup()
 {
     // put your setup code here, to run once:
@@ -159,7 +201,7 @@ void setup()
     Serial.println("\n Starting");
 
     pinMode(TRIGGER_PIN, INPUT);
-    if (digitalRead(TRIGGER_PIN) == LOW) {
+    if (false && digitalRead(TRIGGER_PIN) == LOW) {
         configureWiFi();
     } else {
         WiFi.begin();
@@ -214,23 +256,73 @@ void setup()
 
         server.begin();
         Serial.println("HTTP server started");
+
+        setUpRainbow(colors);
     }
 }
 
-void handleLights()
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos)
+{
+    WheelPos = 255 - WheelPos;
+    if (WheelPos < 85) {
+        return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    }
+    if (WheelPos < 170) {
+        WheelPos -= 85;
+        return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    }
+    WheelPos -= 170;
+    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+void handleLights(const Colors& colors)
 {
     for (uint16_t i = 0; i < strip.numPixels(); i++) {
-        strip.setPixelColor(i, storage.color);
+        strip.setPixelColor(i, colors[i]);
         strip.show();
-        //    delay(wait);
     }
     status_led.setPixelColor(0, storage.color);
     status_led.show();
 }
 
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(uint16_t cycle)
+{
+    for (uint16_t i = 0; i < strip.numPixels(); i++) {
+        auto new_color =  Wheel(((i * 256 / strip.numPixels()) + cycle) & 255);
+
+        Serial.print("new_color ");
+        Serial.print(i);
+        Serial.print(" ");
+        Serial.println(new_color);
+
+        strip.setPixelColor(i, new_color);
+    }
+    strip.show();
+}
+
+unsigned long last_update = 0;
+uint16_t cycle = 123;
+
 void loop()
 {
+    unsigned long loop_time = millis();
+
     server.handleClient();
     webSocket.loop();
-    handleLights();
+
+    if (loop_time - last_update > 20) {
+        Serial.print("time: ");
+        Serial.print(cycle);
+        Serial.print(" ");
+        Serial.println(loop_time);
+
+        //handleLights(colors);
+        rainbowCycle(cycle);
+        cycle = (cycle + 1) % 256;
+        last_update = loop_time;
+    }
+
 }
