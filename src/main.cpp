@@ -12,15 +12,21 @@
 
 #include <Adafruit_NeoPixel.h>
 
+#include <time.h>
+
 #include <array>
+
+#include "data.h"
+#include "colors.h"
 
 const int TRIGGER_PIN = D0;
 const int LIGHTS_PIN = D4;
 
 constexpr int number_of_leds = 7;
-using Colors = std::array<uint32_t, number_of_leds>;
-using ColorVector = std::vector<uint32_t>;
-Colors colors;
+
+Data data;
+Colors led_colors(number_of_leds);
+
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -70,18 +76,6 @@ void updateStorage()
 {
 }
 
-void changeColor(int32_t color)
-{
-    storage.color = color;
-    updateStorage();
-
-    String out("<h1>Chnaging color</h1>");
-
-    //    out += f;
-
-    server.send(200, "text/html", out);
-}
-
 String getContentType(String filename)
 {
     if (filename.endsWith(".htm"))
@@ -128,8 +122,7 @@ bool handleFileRead(String path)
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
-{ // When a WebSocket message is received
-    Serial.printf("Websocket conneted\n");
+{
     switch (type) {
     case WStype_DISCONNECTED: // if the websocket is disconnected
         Serial.printf("[%u] Disconnected!\n", num);
@@ -137,61 +130,21 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
     case WStype_CONNECTED: { // if a new websocket connection is established
         IPAddress ip = webSocket.remoteIP(num);
         Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        std::string send = "{\"server_ip\": \"";
+        send += WiFi.localIP().toString().c_str();
+        send += "\", " + data.to_string(true);
+        send += "}";
+        Serial.printf("Sending: %s\n", send.c_str());
+        webSocket.sendTXT(num, send.c_str(), send.size());
         // rainbow = false;                  // Turn rainbow off when a new connection is established
     } break;
     case WStype_TEXT: // if new text data is received
         Serial.printf("[%u] get Text: %s\n", num, payload);
-        if (payload[0] == '#') { // we get RGB data
-            uint32_t rgb = (uint32_t)strtol((const char*)&payload[1], NULL, 16); // decode rgb data
-            int r = ((rgb >> 20) & 0x3FF); // 10 bits per color, so R: bits 20-29
-            int g = ((rgb >> 10) & 0x3FF); // G: bits 10-19
-            int b = rgb & 0x3FF; // B: bits  0-9
-
-            changeColor(strip.Color(r >> 2, g >> 2, b >> 2));
-        } else if (payload[0] == 'R') { // the browser sends an R when the rainbow effect is enabled
-            //rainbow = true;
-        } else if (payload[0] == 'N') { // the browser sends an N when the rainbow effect is disabled
-            //rainbow = false;
-        }
+        data.from_string(std::string((const char*)payload, lenght));
         break;
     default:
         break;
     }
-}
-
-void setUpColors(Colors& colors, const ColorVector& set)
-{
-    int idx = 0;
-    for (auto& element : colors) {
-        element = set[idx % set.size()];
-        ++idx;
-    }
-}
-
-void setUpRainbow(Colors& colors)
-{
-    ColorVector rainbow = {
-        strip.Color(255, 0, 0),
-        strip.Color(255, 127, 0),
-        strip.Color(255, 255, 0),
-        strip.Color(0, 255, 0),
-        strip.Color(0, 0, 255),
-        strip.Color(75, 0, 255),
-        strip.Color(143, 0, 255),
-    };
-
-    setUpColors(colors, rainbow);
-}
-
-void setUpRGB(Colors& colors)
-{
-    ColorVector rgb = {
-        strip.Color(255, 0, 0),
-        strip.Color(0, 255, 0),
-        strip.Color(0, 0, 255),
-    };
-
-    setUpColors(colors, rgb);
 }
 
 void setup()
@@ -242,13 +195,17 @@ void setup()
             handleFileRead("/index.html");
         });
 
-        server.on("/red", []() { changeColor(strip.Color(255, 0, 0)); });
-        server.on("/green", []() { changeColor(strip.Color(0, 255, 0)); });
-        server.on("/blue", []() { changeColor(strip.Color(0, 0, 255)); });
-
         if (!MDNS.begin("nchl")) {
             Serial.println("Error setting up MDNS responder!");
         }
+
+        configTime(1 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+        Serial.println("\nWaiting for time");
+        while (!time(nullptr)) {
+            Serial.print(".");
+            delay(1000);
+        }
+        Serial.println("");
 
         webSocket.begin();
         webSocket.onEvent(webSocketEvent);
@@ -257,72 +214,22 @@ void setup()
         server.begin();
         Serial.println("HTTP server started");
 
-        setUpRainbow(colors);
     }
 }
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos)
-{
-    WheelPos = 255 - WheelPos;
-    if (WheelPos < 85) {
-        return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-    }
-    if (WheelPos < 170) {
-        WheelPos -= 85;
-        return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-    }
-    WheelPos -= 170;
-    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
-
-void handleLights(const Colors& colors)
-{
-    for (uint16_t i = 0; i < strip.numPixels(); i++) {
-        strip.setPixelColor(i, colors[i]);
-        strip.show();
-    }
-    status_led.setPixelColor(0, storage.color);
-    status_led.show();
-}
-
-// Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint16_t cycle)
-{
-    for (uint16_t i = 0; i < strip.numPixels(); i++) {
-        auto new_color =  Wheel(((i * 256 / strip.numPixels()) + cycle) & 255);
-
-        Serial.print("new_color ");
-        Serial.print(i);
-        Serial.print(" ");
-        Serial.println(new_color);
-
-        strip.setPixelColor(i, new_color);
-    }
-    strip.show();
-}
-
-unsigned long last_update = 0;
-uint16_t cycle = 123;
 
 void loop()
 {
-    unsigned long loop_time = millis();
-
     server.handleClient();
     webSocket.loop();
 
-    if (loop_time - last_update > 20) {
-        Serial.print("time: ");
-        Serial.print(cycle);
-        Serial.print(" ");
-        Serial.println(loop_time);
-
-        //handleLights(colors);
-        rainbowCycle(cycle);
-        cycle = (cycle + 1) % 256;
-        last_update = loop_time;
+    if (colors(led_colors, data)) {
+        for (uint16_t i = 0; i < strip.numPixels(); i++) {
+            strip.setPixelColor(i, led_colors[i]);
+        }
+        strip.show();
     }
-
+    
+    //time_t now = time(nullptr);
+    //struct tm* t = localtime (&now);
+    //Serial.printf("%d:%d\n", t->tm_hour, t->tm_min);
 }

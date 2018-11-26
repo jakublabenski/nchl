@@ -1,52 +1,117 @@
 
-var rainbowEnable = false;
 console.log('WebSocket ' + location.hostname);
 
-var connection = new WebSocket('ws://' + location.hostname + ':81/');
-connection.onopen = function () {
-  connection.send('Connect ' + new Date());
-};
-connection.onerror = function (error) {
-  console.log('WebSocket Error ', error);
-};
-connection.onmessage = function (e) {
-  console.log('Server: ', e.data);
-};
-connection.onclose = function () {
-  console.log('WebSocket connection closed');
-};
+var connection = null;
 
-function sendRGB () {
-  var r = document.getElementById('r').value** 2 / 1023;
-  var g = document.getElementById('g').value** 2 / 1023;
-  var b = document.getElementById('b').value** 2 / 1023;
+function connect() {
+  console.log('Connecting');
+  connection = new WebSocket('ws://' + location.hostname + ':81/');
 
-  var rgb = r << 20 | g << 10 | b;
-  var rgbstr = '#' + rgb.toString(16);
-  console.log('RGB: ' + rgbstr);
-  connection.send(rgbstr);
+  connection.onopen = function () {
+    connection.send('Connect ' + new Date());
+  };
+  connection.onerror = function (error) {
+    console.log('WebSocket Error ', error);
+  };
+  connection.onmessage = function (e) {
+    console.log('Server: ', e.data);
+    var data = JSON.parse(e.data);
+
+    if (data.server_ip != null) {
+      set_server_ip(data.server_ip);
+    }
+    if (data.brightness != null) {
+      document.getElementById('brightness').value = data.brightness;
+    }
+    if (data.timer != null) {
+      document.getElementById('timer').checked = data.timer;
+      update_timer();
+    }
+    if (data.start_time != null) {
+      document.getElementById('start_time').value = data.start_time;  
+    }
+    if (data.stop_time != null) {
+      document.getElementById('stop_time').value = data.stop_time;  
+    }
+  };
+  connection.onclose = function () {
+    console.log('WebSocket connection closed');
+    set_server_ip("niepołączony");
+    connect();
+  };
 }
 
-function rainbowEffect () {
-  rainbowEnable = ! rainbowEnable;
-  if (rainbowEnable) {
-    connection.send("R");
-    document.getElementById('rainbow').style.backgroundColor = '#00878F';
-    document.getElementById('r').className = 'disabled';
-    document.getElementById('g').className = 'disabled';
-    document.getElementById('b').className = 'disabled';
-    document.getElementById('r').disabled = true;
-    document.getElementById('g').disabled = true;
-    document.getElementById('b').disabled = true;
-  } else {
-    connection.send("N");
-    document.getElementById('rainbow').style.backgroundColor = '#999';
-    document.getElementById('r').className = 'enabled';
-    document.getElementById('g').className = 'enabled';
-    document.getElementById('b').className = 'enabled';
-    document.getElementById('r').disabled = false;
-    document.getElementById('g').disabled = false;
-    document.getElementById('b').disabled = false;
-    sendRGB();
+function set_server_ip(ip) {
+  var element = document.getElementById('server_ip');
+
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
   }
+  element.appendChild(document.createTextNode(ip));
+}
+
+connect();
+
+
+
+var Type = {
+  RAINBOW: "R",
+  RGB: "B",
+  GREEN: "G",
+  YELLOW: "Y",
+  FLICKER_YELLOW: "F",
+};
+
+var type = Type.RAINBOW;
+
+function update() {
+  var payload = JSON.stringify({
+    timer: document.getElementById('timer').checked,
+    start_time: document.getElementById('start_time').value,
+    stop_time: document.getElementById('stop_time').value,
+    type: type,
+    brightness: parseInt(document.getElementById('brightness').value, 10)
+  });
+  console.log('WebSocket sending ' + payload);
+  connection.send(payload);
+}
+
+function update_timer()
+{
+  document.getElementById('start_time').disabled = !document.getElementById('timer').checked;
+  document.getElementById('stop_time').disabled = !document.getElementById('timer').checked;
+}
+
+function timerChanged() {
+  update_timer();
+  update();
+}
+
+function setBrightness() {
+  update();
+}
+
+function rainbowEffect() {
+  type = Type.RAINBOW;
+  update();
+}
+
+function greenEffect() {
+  type = Type.GREEN;
+  update();
+}
+
+function yellowEffect() {
+  type = Type.YELLOW;
+  update();
+}
+
+function flickerYellowEffect() {
+  type = Type.FLICKER_YELLOW;
+  update();
+}
+
+function rgbEffect() {
+  type = Type.RGB;
+  update();
 }

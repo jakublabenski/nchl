@@ -14,25 +14,27 @@
 <body>
   <center>
     <header>
-      <h1>LED Control</h1>
+      <h1>Światełka</h1>
     </header>
     <div>
-      <table>
-        <tr>
-          <td style="width:14.4px; text-align: right">R: </td>
-          <td><input class="enabled" id="r" type="range" min="0" max="1023" step="1" oninput="sendRGB();" value="0"></td>
-        </tr>
-        <tr>
-          <td style="width:14.4px; text-align: right">G: </td>
-          <td><input class="enabled" id="g" type="range" min="0" max="1023" step="1" oninput="sendRGB();" value="0"></td>
-        </tr>
-        <tr>
-          <td style="width:14.4px; text-align: right">B: </td>
-          <td><input class="enabled" id="b" type="range" min="0" max="1023" step="1" oninput="sendRGB();" value="0"></td>
-        </tr>
-      </table>
       <p style="margin:8px 0px">
-        <button id="rainbow" class="button" style="background-color:#999" onclick="rainbowEffect();">Rainbow</button>
+        Tryb:
+        <button id="rainbow" class="button" style="background-color:#999" onclick="rainbowEffect();">Tęcza</button>
+        <button id="green" class="button" style="background-color:#999" onclick="greenEffect();">Zielone</button>
+        <button id="yellow" class="button" style="background-color:#999" onclick="yellowEffect();">Żółte</button>
+        <button id="flicker_yellow" class="button" style="background-color:#999" onclick="flickerYellowEffect();">Mrugające żółte</button>
+        <button id="rgb" class="button" style="background-color:#999" onclick="rgbEffect();">RGB</button>
+      </p>
+      <p style="margin:8px 0px">
+        <input type="checkbox" id="timer" onchange="timerChanged();">
+        Timer: włącz o <input type="time" onchange="timerChanged();" autocomplete id="start_time">
+              wyłącz o <input type="time" onchange="timerChanged();" autocomplete id="stop_time">
+      </p>
+      <p style="margin:8px 0px">
+          Jasność: <input class="enabled" id="brightness" type="range" min="0" max="1023" step="1" oninput="setBrightness();" value="0"/>
+      </p>
+      <p style="margin:8px 0px">
+        IP serwera: <span id="server_ip">niepołączony</span>
       </p>
     </div>
   </center>
