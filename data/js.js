@@ -33,6 +33,9 @@ function connect() {
     if (data.stop_time != null) {
       document.getElementById('stop_time').value = data.stop_time;  
     }
+    if (data.number_of_leds != null) {
+      document.getElementById('number_of_leds').value = data.number_of_leds;  
+    }
   };
   connection.onclose = function () {
     console.log('WebSocket connection closed');
@@ -56,7 +59,8 @@ connect();
 
 var Type = {
   RAINBOW: "R",
-  RGB: "B",
+  RGBY: "B",
+  RGOBY: "O",
   GREEN: "G",
   YELLOW: "Y",
   FLICKER_YELLOW: "F",
@@ -70,7 +74,8 @@ function update() {
     start_time: document.getElementById('start_time').value,
     stop_time: document.getElementById('stop_time').value,
     type: type,
-    brightness: parseInt(document.getElementById('brightness').value, 10)
+    brightness: parseInt(document.getElementById('brightness').value, 10),
+    number_of_leds: parseInt(document.getElementById('number_of_leds').value, 10),
   });
   console.log('WebSocket sending ' + payload);
   connection.send(payload);
@@ -88,6 +93,10 @@ function timerChanged() {
 }
 
 function setBrightness() {
+  update();
+}
+
+function setNumberOfLeds() {
   update();
 }
 
@@ -111,7 +120,12 @@ function flickerYellowEffect() {
   update();
 }
 
-function rgbEffect() {
-  type = Type.RGB;
+function rgbyEffect() {
+  type = Type.RGBY;
+  update();
+}
+
+function rgobyEffect() {
+  type = Type.RGOBY;
   update();
 }

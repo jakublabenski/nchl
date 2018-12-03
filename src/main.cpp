@@ -26,6 +26,7 @@ constexpr int number_of_leds = 7;
 
 Data data;
 Colors led_colors(number_of_leds);
+unsigned long needs_save = 0;
 
 
 // Parameter 1 = number of pixels in strip
@@ -44,10 +45,6 @@ Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, D2, NEO_GRB + NEO_KHZ800);
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
-
-struct Storage {
-    uint32_t color;
-} storage;
 
 void configureWiFi()
 {
@@ -141,6 +138,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
     case WStype_TEXT: // if new text data is received
         Serial.printf("[%u] get Text: %s\n", num, payload);
         data.from_string(std::string((const char*)payload, lenght));
+        if (strip.numPixels() != data.number_of_leds()) {
+            strip.updateLength(data.number_of_leds());
+        }
+        needs_save = millis() + 5000;
         break;
     default:
         break;
@@ -168,15 +169,12 @@ void setup()
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
 
-        EEPROM.begin(128);
+        EEPROM.begin(Data::max_data_size);
 
-        EEPROM.get(0, storage);
-        Serial.print("storage.color ");
-        Serial.print(storage.color);
-        Serial.println();
-
-        // EEPROM.put(0, u);
-        // EEPROM.commit();
+        char buf[Data::max_data_size];
+        EEPROM.get(0, buf);
+        Serial.printf("Loading: %s\n", buf);
+        data.from_string(buf);
 
         strip.begin();
         strip.show(); // Initialize all pixels to 'off'
@@ -195,7 +193,7 @@ void setup()
             handleFileRead("/index.html");
         });
 
-        if (!MDNS.begin("nchl")) {
+        if (!MDNS.begin("swiatelka")) {
             Serial.println("Error setting up MDNS responder!");
         }
 
@@ -228,8 +226,17 @@ void loop()
         }
         strip.show();
     }
-    
-    //time_t now = time(nullptr);
-    //struct tm* t = localtime (&now);
-    //Serial.printf("%d:%d\n", t->tm_hour, t->tm_min);
+
+    if (needs_save > 0 && needs_save < millis()) {
+        needs_save = 0;
+
+        std::string to_save = data.to_string(false);
+        char buf[Data::max_data_size];
+        memcpy(buf, to_save.c_str(), to_save.length());
+        buf[to_save.length()] = '\0';
+        Serial.printf("Saving: %s\n", buf);
+
+        EEPROM.put(0, buf);
+        EEPROM.commit();
+    }
 }

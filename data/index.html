@@ -23,7 +23,8 @@
         <button id="green" class="button" style="background-color:#999" onclick="greenEffect();">Zielone</button>
         <button id="yellow" class="button" style="background-color:#999" onclick="yellowEffect();">Żółte</button>
         <button id="flicker_yellow" class="button" style="background-color:#999" onclick="flickerYellowEffect();">Mrugające żółte</button>
-        <button id="rgb" class="button" style="background-color:#999" onclick="rgbEffect();">RGB</button>
+        <button id="rgby" class="button" style="background-color:#999" onclick="rgbyEffect();">RGBY</button>
+        <button id="rgoby" class="button" style="background-color:#999" onclick="rgobyEffect();">RGOBY</button>
       </p>
       <p style="margin:8px 0px">
         <input type="checkbox" id="timer" onchange="timerChanged();">
@@ -31,7 +32,10 @@
               wyłącz o <input type="time" onchange="timerChanged();" autocomplete id="stop_time">
       </p>
       <p style="margin:8px 0px">
-          Jasność: <input class="enabled" id="brightness" type="range" min="0" max="1023" step="1" oninput="setBrightness();" value="0"/>
+        Jasność: <input class="enabled" id="brightness" type="range" min="0" max="1023" step="1" oninput="setBrightness();" value="0"/>
+      </p>
+      <p style="margin:8px 0px">
+        Liczba światełek: <input id="number_of_leds" type="number" min="1" max="250" oninput="setNumberOfLeds();" />
       </p>
       <p style="margin:8px 0px">
         IP serwera: <span id="server_ip">niepołączony</span>

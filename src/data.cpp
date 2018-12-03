@@ -5,6 +5,8 @@
 
 #include "json11.hpp"
 
+#include <ctype.h>
+
 namespace
 {
 bool read_string(const json11::Json::object &object,
@@ -93,14 +95,76 @@ bool parse_mode(const std::string& new_mode, Mode& out_mode)
         case Mode::FLICKER_YELLOW:
             out_mode = Mode::FLICKER_YELLOW;
             return true;
-        case Mode::RGB:
-            out_mode = Mode::RGB;
+        case Mode::RGBY:
+            out_mode = Mode::RGBY;
+            return true;
+        case Mode::RGOBY:
+            out_mode = Mode::RGOBY;
             return true;
     }
     return false;
 }
 
+bool parse_time(const std::string& str, int& total_minutes)
+{
+    if (str.size() != 5) {
+        return false;
+    }
+
+    if (!isdigit(str[0])) {
+        return false;
+    }
+    if (!isdigit(str[1])) {
+        return false;
+    }
+    if (str[2] != ':') {
+        return false;
+    }
+    if (!isdigit(str[3])) {
+        return false;
+    }
+    if (!isdigit(str[4])) {
+        return false;
+    }
+
+    int hours = 10 * (str[0] - '0') + (str[1] - '0');
+    if (hours < 0 || hours > 23) {
+        return false;
+    }
+    int minutes = 10 * (str[3] - '0') + (str[4] - '0');
+    if (minutes < 0 || minutes > 59) {
+        return false;
+    }
+
+    total_minutes = 60 * hours + minutes;
+    return true;
+}
+
 } // namespace
+
+bool Data::enabled(int hours, int minutes)
+{
+    if (!timer_) {
+        return true;
+    }
+
+    int current = 60 * hours + minutes;
+
+    int start;
+
+    if (!parse_time(start_time_, start)) {
+        return true;
+    }
+
+    int stop;
+    if (!parse_time(stop_time_, stop)) {
+        return true;
+    }
+
+    return (start < stop) 
+        ? (start <= current && current <= stop) 
+        : !(start > current && current > stop);
+}
 
 void Data::from_string(const std::string &p)
 {
@@ -152,24 +216,30 @@ void Data::from_string(const std::string &p)
         return;
     }
 
+    int new_number_of_leds = 0.0;
+    if (!read_number(object, "number_of_leds", new_number_of_leds)) {
+        return;
+    }
 
     brightness_ = new_brightness;
     timer_ = new_timer;
     start_time_ = new_start_time;
     stop_time_ = new_stop_time;
+    number_of_leds_ = new_number_of_leds;
 }
 
 std::string Data::to_string(bool as_keys) const
 {
-    const int buf_size = 132;
-    char buf[buf_size];
-    snprintf(buf, buf_size,
+    char buf[max_data_size];
+    snprintf(buf, max_data_size,
              "\"brightness\": %u, \"type\": \"%c\", \"timer\": %s,"
-             "\"start_time\": \"%s\", \"stop_time\": \"%s\"",
+             "\"start_time\": \"%s\", \"stop_time\": \"%s\","
+             "\"number_of_leds\": %d",
              brightness_, mode_,
              timer_ ? "true" : "false",
              start_time_.c_str(),
-             stop_time_.c_str());
+             stop_time_.c_str(),
+             number_of_leds_);
 
     std::string ret(buf);
     return as_keys ? ret : ("{" + ret + "}");

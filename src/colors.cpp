@@ -25,7 +25,6 @@ using ColorVector = std::vector<Color>;
 void setUpColors(Colors &colors, const ColorVector &set, double brightness)
 {
     int idx = 0;
-    Serial.printf("BR; %f\n", brightness);
     for (auto &element : colors)
     {
         element = set[idx % set.size()].toColor(brightness);
@@ -137,12 +136,24 @@ bool colors(Colors &out_colors, const Data &data)
 
     switch (data.mode())
     {
-    case Mode::RGB:
+    case Mode::RGBY:
     {
         ColorVector rgb = {
             {255, 0, 0},
             {0, 255, 0},
             {0, 0, 255},
+            {255, 255, 0},
+        };
+        return simpleColorHandler(out_colors, rgb, data.brightness());
+    }
+    case Mode::RGOBY:
+    {
+        ColorVector rgb = {
+            {255, 0, 0},
+            {0, 255, 0},
+            {255, 165, 0},
+            {0, 0, 255},
+            {255, 255, 0},
         };
         return simpleColorHandler(out_colors, rgb, data.brightness());
     }
