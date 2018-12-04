@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+#include <time.h>
 #include <algorithm>
 #include <cmath>
 
@@ -13,7 +14,7 @@ struct Color
 {
     Color(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
 
-    uint32_t toColor(double brightness) const;
+    uint32_t toColor() const;
 
     uint8_t r = 0;
     uint8_t g = 0;
@@ -22,17 +23,17 @@ struct Color
 
 using ColorVector = std::vector<Color>;
 
-void setUpColors(Colors &colors, const ColorVector &set, double brightness)
+void setUpColors(Colors &colors, const ColorVector &set)
 {
     int idx = 0;
     for (auto &element : colors)
     {
-        element = set[idx % set.size()].toColor(brightness);
+        element = set[idx % set.size()].toColor();
         ++idx;
     }
 }
 
-bool handleYellowFlicker(Colors& out_colors, double brightness)
+bool handleYellowFlicker(Colors& out_colors)
 {
     static unsigned long last_update = 0;
 
@@ -54,7 +55,7 @@ bool handleYellowFlicker(Colors& out_colors, double brightness)
 //                random(33, 44) * std::pow(intensity, 2),
 
 
-        setUpColors(out_colors, c, brightness);
+        setUpColors(out_colors, c);
 
         last_update = loop_time;
 
@@ -79,15 +80,15 @@ Color wheel(byte WheelPos)
     return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
-void rainbowCycle(Colors& out_colors, double brightness, uint16_t cycle)
+void rainbowCycle(Colors& out_colors, uint16_t cycle)
 {
     for (uint16_t i = 0; i < out_colors.size(); i++) {
         auto new_color =  wheel(((i * 256 / out_colors.size()) + cycle) & 255);
-        out_colors[i] = new_color.toColor(brightness);
+        out_colors[i] = new_color.toColor();
     }
 }
 
-bool handleRanibow(Colors& out_colors, double brightness)
+bool handleRanibow(Colors& out_colors)
 {
     static unsigned long last_update = 0;
     static uint16_t cycle = 0;
@@ -95,7 +96,7 @@ bool handleRanibow(Colors& out_colors, double brightness)
     unsigned long loop_time = millis();
 
     if (loop_time - last_update > 20) {
-        rainbowCycle(out_colors, brightness, cycle);
+        rainbowCycle(out_colors, cycle);
         cycle = (cycle + 1) % 256;
         last_update = loop_time;
 
@@ -105,15 +106,14 @@ bool handleRanibow(Colors& out_colors, double brightness)
     return false;
 }
 
-bool simpleColorHandler(Colors& out_colors, const ColorVector& colors,
-    double brightness)
+bool simpleColorHandler(Colors& out_colors, const ColorVector& colors)
 {
     static unsigned long last_update = 0;
 
     unsigned long loop_time = millis();
 
     if (loop_time - last_update > 200) {
-        setUpColors(out_colors, colors, brightness);
+        setUpColors(out_colors, colors);
 
         last_update = loop_time;
 
@@ -124,15 +124,24 @@ bool simpleColorHandler(Colors& out_colors, const ColorVector& colors,
 
 } // namespace
 
-uint32_t Color::toColor(double brightness) const
+uint32_t Color::toColor() const
 {
-    return ((uint32_t)(brightness * r) << 16) 
-        | ((uint32_t)(brightness * g) << 8)
-        | (uint32_t)(brightness * b);
+    return ((uint32_t)r << 16) 
+        | ((uint32_t)g << 8)
+        | (uint32_t)b;
 }
 
 bool colors(Colors &out_colors, const Data &data)
 {
+    time_t now = time(nullptr);
+    struct tm* t = localtime (&now);
+
+    if (!data.enabled(t->tm_hour, t->tm_min)) {
+        ColorVector black = {
+            {0, 0, 0},
+        };
+        return simpleColorHandler(out_colors, black);
+    }
 
     switch (data.mode())
     {
@@ -144,7 +153,7 @@ bool colors(Colors &out_colors, const Data &data)
             {0, 0, 255},
             {255, 255, 0},
         };
-        return simpleColorHandler(out_colors, rgb, data.brightness());
+        return simpleColorHandler(out_colors, rgb);
     }
     case Mode::RGOBY:
     {
@@ -155,7 +164,7 @@ bool colors(Colors &out_colors, const Data &data)
             {0, 0, 255},
             {255, 255, 0},
         };
-        return simpleColorHandler(out_colors, rgb, data.brightness());
+        return simpleColorHandler(out_colors, rgb);
     }
     case Mode::YELLOW:
     {
@@ -169,7 +178,7 @@ bool colors(Colors &out_colors, const Data &data)
             {255, 253, 208},
             {239, 253, 95},
         };
-        return simpleColorHandler(out_colors, c, data.brightness());
+        return simpleColorHandler(out_colors, c);
     }
     case Mode::GREEN:
     {
@@ -180,12 +189,19 @@ bool colors(Colors &out_colors, const Data &data)
             {0, 200, 0},
             {20, 200, 20},
         };
-        return simpleColorHandler(out_colors, c, data.brightness());
+        return simpleColorHandler(out_colors, c);
+    }
+    case Mode::WHITE:
+    {
+        ColorVector c = {
+            {255, 255, 255},
+        };
+        return simpleColorHandler(out_colors, c);
     }
     case Mode::RAINBOW:
-        return handleRanibow(out_colors, data.brightness());
+        return handleRanibow(out_colors);
     case Mode::FLICKER_YELLOW:
-        return handleYellowFlicker(out_colors, data.brightness());
+        return handleYellowFlicker(out_colors);
 
     }
 

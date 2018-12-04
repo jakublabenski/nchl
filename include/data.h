@@ -12,6 +12,7 @@ enum class Mode : unsigned char
     GREEN = 'G',
     YELLOW = 'Y',
     FLICKER_YELLOW = 'F',
+    WHITE = 'W',
 };
 
 class Data
@@ -24,12 +25,12 @@ class Data
         return mode_;
     }
 
-    double brightness() const
+    uint8_t brightness() const
     {
-        return brightness_ / 1024.0;
+        return brightness_ / 4;
     }
 
-    bool enabled(int hours, int minutes);
+    bool enabled(int hours, int minutes) const;
 
     void from_string(const std::string &);
     std::string to_string(bool as_keys) const;

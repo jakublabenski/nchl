@@ -19,23 +19,24 @@
     <div>
       <p style="margin:8px 0px">
         Tryb:
-        <button id="rainbow" class="button" style="background-color:#999" onclick="rainbowEffect();">Tęcza</button>
-        <button id="green" class="button" style="background-color:#999" onclick="greenEffect();">Zielone</button>
-        <button id="yellow" class="button" style="background-color:#999" onclick="yellowEffect();">Żółte</button>
-        <button id="flicker_yellow" class="button" style="background-color:#999" onclick="flickerYellowEffect();">Mrugające żółte</button>
-        <button id="rgby" class="button" style="background-color:#999" onclick="rgbyEffect();">RGBY</button>
-        <button id="rgoby" class="button" style="background-color:#999" onclick="rgobyEffect();">RGOBY</button>
+        <button id="rainbow" class="button" style="background-color:#999" onclick="switch_rainbow();">Tęcza</button>
+        <button id="green" class="button" style="background-color:#999" onclick="switch_green();">Zielone</button>
+        <button id="white" class="button" style="background-color:#999" onclick="switch_white();">Białe</button>
+        <button id="yellow" class="button" style="background-color:#999" onclick="switch_yellow();">Żółte</button>
+        <button id="flicker_yellow" class="button" style="background-color:#999" onclick="switch_flicker_yellow();">Mrugające żółte</button>
+        <button id="rgby" class="button" style="background-color:#999" onclick="switch_rgby();">RGBY</button>
+        <button id="rgoby" class="button" style="background-color:#999" onclick="switch_rgoby();">RGOBY</button>
       </p>
       <p style="margin:8px 0px">
-        <input type="checkbox" id="timer" onchange="timerChanged();">
-        Timer: włącz o <input type="time" onchange="timerChanged();" autocomplete id="start_time">
-              wyłącz o <input type="time" onchange="timerChanged();" autocomplete id="stop_time">
+        <input type="checkbox" id="timer" onchange="timer_changed();">
+        Timer: włącz o <input type="time" onchange="timer_changed();" autocomplete id="start_time">
+              wyłącz o <input type="time" onchange="timer_changed();" autocomplete id="stop_time">
       </p>
       <p style="margin:8px 0px">
-        Jasność: <input class="enabled" id="brightness" type="range" min="0" max="1023" step="1" oninput="setBrightness();" value="0"/>
+        Jasność: <input class="enabled" id="brightness" type="range" min="0" max="1023" step="1" oninput="update();" value="0"/>
       </p>
       <p style="margin:8px 0px">
-        Liczba światełek: <input id="number_of_leds" type="number" min="1" max="250" oninput="setNumberOfLeds();" />
+        Liczba światełek: <input id="number_of_leds" type="number" min="1" max="250" oninput="update();" />
       </p>
       <p style="margin:8px 0px">
         IP serwera: <span id="server_ip">niepołączony</span>

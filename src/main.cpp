@@ -14,12 +14,10 @@
 
 #include <time.h>
 
-#include <array>
-
 #include "data.h"
 #include "colors.h"
 
-const int TRIGGER_PIN = D0;
+const int TRIGGER_PIN = D3;
 const int LIGHTS_PIN = D4;
 
 constexpr int number_of_leds = 7;
@@ -27,7 +25,6 @@ constexpr int number_of_leds = 7;
 Data data;
 Colors led_colors(number_of_leds);
 unsigned long needs_save = 0;
-
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -38,8 +35,6 @@ unsigned long needs_save = 0;
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(number_of_leds, LIGHTS_PIN, NEO_GRB + NEO_KHZ800);
-
-Adafruit_NeoPixel status_led = Adafruit_NeoPixel(1, D2, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -60,7 +55,8 @@ void configureWiFi()
     // in seconds
     // wifiManager.setTimeout(120);
 
-    if (!wifiManager.startConfigPortal("nchl_configuration")) {
+    if (!wifiManager.startConfigPortal("konfiguracja_swiatelek"))
+    {
         Serial.println("failed to connect and hit timeout");
     }
     Serial.println("Reconfiguration done");
@@ -106,25 +102,28 @@ bool handleFileRead(String path)
 { // send the right file to the client (if it exists)
     Serial.println("handleFileRead: " + path);
     if (path.endsWith("/"))
-        path += "index.html"; // If a folder is requested, send the index file
+        path += "index.html";                  // If a folder is requested, send the index file
     String contentType = getContentType(path); // Get the MIME type
-    if (SPIFFS.exists(path)) { // If the file exists
-        File file = SPIFFS.open(path, "r"); // Open it
-        size_t sent = server.streamFile(file, contentType); // And send it to the client
-        file.close(); // Then close the file again
+    if (SPIFFS.exists(path))
+    {                                                       // If the file exists
+        File file = SPIFFS.open(path, "r");                 // Open it
+        server.streamFile(file, contentType);               // And send it to the client
+        file.close();                                       // Then close the file again
         return true;
     }
     Serial.println("\tFile Not Found");
     return false; // If the file doesn't exist, return false
 }
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
 {
-    switch (type) {
+    switch (type)
+    {
     case WStype_DISCONNECTED: // if the websocket is disconnected
         Serial.printf("[%u] Disconnected!\n", num);
         break;
-    case WStype_CONNECTED: { // if a new websocket connection is established
+    case WStype_CONNECTED:
+    { // if a new websocket connection is established
         IPAddress ip = webSocket.remoteIP(num);
         Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
         std::string send = "{\"server_ip\": \"";
@@ -134,11 +133,13 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lenght)
         Serial.printf("Sending: %s\n", send.c_str());
         webSocket.sendTXT(num, send.c_str(), send.size());
         // rainbow = false;                  // Turn rainbow off when a new connection is established
-    } break;
+    }
+    break;
     case WStype_TEXT: // if new text data is received
         Serial.printf("[%u] get Text: %s\n", num, payload);
-        data.from_string(std::string((const char*)payload, lenght));
-        if (strip.numPixels() != data.number_of_leds()) {
+        data.from_string(std::string((const char *)payload, lenght));
+        if (strip.numPixels() != data.number_of_leds())
+        {
             strip.updateLength(data.number_of_leds());
         }
         needs_save = millis() + 5000;
@@ -155,12 +156,16 @@ void setup()
     Serial.println("\n Starting");
 
     pinMode(TRIGGER_PIN, INPUT);
-    if (false && digitalRead(TRIGGER_PIN) == LOW) {
+    if (false && digitalRead(TRIGGER_PIN) == LOW)
+    {
         configureWiFi();
-    } else {
+    }
+    else
+    {
         WiFi.begin();
         Serial.print("Connecting");
-        while (WiFi.status() != WL_CONNECTED) {
+        while (WiFi.status() != WL_CONNECTED)
+        {
             delay(500);
             Serial.print(".");
         }
@@ -179,9 +184,6 @@ void setup()
         strip.begin();
         strip.show(); // Initialize all pixels to 'off'
 
-        status_led.begin();
-        status_led.show();
-
         SPIFFS.begin();
 
         server.onNotFound([]() {
@@ -193,13 +195,15 @@ void setup()
             handleFileRead("/index.html");
         });
 
-        if (!MDNS.begin("swiatelka")) {
+        if (!MDNS.begin("swiatelka"))
+        {
             Serial.println("Error setting up MDNS responder!");
         }
 
         configTime(1 * 3600, 0, "pool.ntp.org", "time.nist.gov");
         Serial.println("\nWaiting for time");
-        while (!time(nullptr)) {
+        while (!time(nullptr))
+        {
             Serial.print(".");
             delay(1000);
         }
@@ -211,23 +215,13 @@ void setup()
 
         server.begin();
         Serial.println("HTTP server started");
-
     }
 }
 
-void loop()
+void save_data()
 {
-    server.handleClient();
-    webSocket.loop();
-
-    if (colors(led_colors, data)) {
-        for (uint16_t i = 0; i < strip.numPixels(); i++) {
-            strip.setPixelColor(i, led_colors[i]);
-        }
-        strip.show();
-    }
-
-    if (needs_save > 0 && needs_save < millis()) {
+    if (needs_save > 0 && needs_save < millis())
+    {
         needs_save = 0;
 
         std::string to_save = data.to_string(false);
@@ -239,4 +233,27 @@ void loop()
         EEPROM.put(0, buf);
         EEPROM.commit();
     }
+}
+
+void handle_colors()
+{
+    if (colors(led_colors, data))
+    {
+        strip.setBrightness(data.brightness());
+        for (uint16_t i = 0; i < strip.numPixels(); i++)
+        {
+            strip.setPixelColor(i, led_colors[i]);
+        }
+        strip.show();
+    }
+}
+
+void loop()
+{
+    server.handleClient();
+    webSocket.loop();
+
+    handle_colors();
+    save_data();
+
 }

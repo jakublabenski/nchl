@@ -101,6 +101,9 @@ bool parse_mode(const std::string& new_mode, Mode& out_mode)
         case Mode::RGOBY:
             out_mode = Mode::RGOBY;
             return true;
+        case Mode::WHITE:
+            out_mode = Mode::WHITE;
+            return true;
     }
     return false;
 }
@@ -142,7 +145,7 @@ bool parse_time(const std::string& str, int& total_minutes)
 
 } // namespace
 
-bool Data::enabled(int hours, int minutes)
+bool Data::enabled(int hours, int minutes) const
 {
     if (!timer_) {
         return true;
@@ -162,8 +165,8 @@ bool Data::enabled(int hours, int minutes)
     }
 
     return (start < stop) 
-        ? (start <= current && current <= stop) 
-        : !(start > current && current > stop);
+        ? (start <= current && current < stop) 
+        : !(start > current && current >= stop);
 }
 
 void Data::from_string(const std::string &p)
