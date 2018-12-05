@@ -17,10 +17,11 @@
 #include "data.h"
 #include "colors.h"
 
-const int TRIGGER_PIN = D8;
+const int TRIGGER_PIN = D7;
+const int TRIGGER_HIGH_PIN = D8;
 const int LIGHTS_PIN = D4;
 
-constexpr int number_of_leds = 7;
+constexpr int number_of_leds = 50;
 
 Data data;
 Colors led_colors(number_of_leds);
@@ -34,7 +35,7 @@ unsigned long needs_save = 0;
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(number_of_leds, LIGHTS_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(number_of_leds, LIGHTS_PIN, NEO_RGB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -48,12 +49,7 @@ void configureWiFi()
     WiFiManager wifiManager;
 
     // reset settings - for testing
-    wifiManager.resetSettings();
-
-    // sets timeout until configuration portal gets turned off
-    // useful to make it all retry or go to sleep
-    // in seconds
-    // wifiManager.setTimeout(120);
+    //wifiManager.resetSettings();
 
     if (!wifiManager.startConfigPortal("konfiguracja_swiatelek"))
     {
@@ -64,10 +60,6 @@ void configureWiFi()
 
 ESP8266WebServer server(80);
 WebSocketsServer webSocket(81);
-
-void updateStorage()
-{
-}
 
 String getContentType(String filename)
 {
@@ -115,6 +107,14 @@ bool handleFileRead(String path)
     return false; // If the file doesn't exist, return false
 }
 
+void update_data()
+{
+    if (strip.numPixels() != data.number_of_leds())
+    {
+        strip.updateLength(data.number_of_leds());
+    }
+}
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
 {
     switch (type)
@@ -138,10 +138,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
     case WStype_TEXT: // if new text data is received
         Serial.printf("[%u] get Text: %s\n", num, payload);
         data.from_string(std::string((const char *)payload, lenght));
-        if (strip.numPixels() != data.number_of_leds())
-        {
-            strip.updateLength(data.number_of_leds());
-        }
+        update_data();
         needs_save = millis() + 5000;
         break;
     default:
@@ -155,6 +152,8 @@ void setup()
     Serial.begin(115200);
     Serial.println("\n Starting");
 
+    pinMode(TRIGGER_HIGH_PIN, OUTPUT);
+    digitalWrite(TRIGGER_HIGH_PIN, HIGH);
     pinMode(TRIGGER_PIN, INPUT);
     if (digitalRead(TRIGGER_PIN) == LOW)
     {
@@ -180,6 +179,7 @@ void setup()
         EEPROM.get(0, buf);
         Serial.printf("Loading: %s\n", buf);
         data.from_string(buf);
+        update_data();
 
         strip.begin();
         strip.show(); // Initialize all pixels to 'off'

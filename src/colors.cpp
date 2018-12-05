@@ -169,13 +169,13 @@ bool colors(Colors &out_colors, const Data &data)
     case Mode::YELLOW:
     {
         ColorVector c = {
-            {248, 222, 126},
+            {248, 222, 26},
             {250, 218, 94},
             {249, 166, 2},
             {255, 211, 0},
-            {252, 244, 163},
+            {252, 244, 63},
             {252, 226, 5},
-            {255, 253, 208},
+            {255, 253, 88},
             {239, 253, 95},
         };
         return simpleColorHandler(out_colors, c);
