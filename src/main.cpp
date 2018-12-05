@@ -17,7 +17,7 @@
 #include "data.h"
 #include "colors.h"
 
-const int TRIGGER_PIN = D3;
+const int TRIGGER_PIN = D8;
 const int LIGHTS_PIN = D4;
 
 constexpr int number_of_leds = 7;
@@ -156,7 +156,7 @@ void setup()
     Serial.println("\n Starting");
 
     pinMode(TRIGGER_PIN, INPUT);
-    if (false && digitalRead(TRIGGER_PIN) == LOW)
+    if (digitalRead(TRIGGER_PIN) == LOW)
     {
         configureWiFi();
     }
