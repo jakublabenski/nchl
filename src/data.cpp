@@ -104,6 +104,13 @@ bool parse_mode(const std::string& new_mode, Mode& out_mode)
         case Mode::WHITE:
             out_mode = Mode::WHITE;
             return true;
+        case Mode::RED:
+            out_mode = Mode::RED;
+            return true;
+        case Mode::BLUE:
+            out_mode = Mode::BLUE;
+            return true;
+
     }
     return false;
 }

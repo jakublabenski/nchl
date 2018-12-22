@@ -26,6 +26,9 @@ constexpr int number_of_leds = 50;
 Data data;
 Colors led_colors(number_of_leds);
 unsigned long needs_save = 0;
+std::string start_time;
+
+void handle_colors(bool initial = false);
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -97,10 +100,10 @@ bool handleFileRead(String path)
         path += "index.html";                  // If a folder is requested, send the index file
     String contentType = getContentType(path); // Get the MIME type
     if (SPIFFS.exists(path))
-    {                                                       // If the file exists
-        File file = SPIFFS.open(path, "r");                 // Open it
-        server.streamFile(file, contentType);               // And send it to the client
-        file.close();                                       // Then close the file again
+    {                                         // If the file exists
+        File file = SPIFFS.open(path, "r");   // Open it
+        server.streamFile(file, contentType); // And send it to the client
+        file.close();                         // Then close the file again
         return true;
     }
     Serial.println("\tFile Not Found");
@@ -112,6 +115,8 @@ void update_data()
     if (strip.numPixels() != data.number_of_leds())
     {
         strip.updateLength(data.number_of_leds());
+        Colors new_colors(data.number_of_leds());
+        led_colors.swap(new_colors);
     }
 }
 
@@ -128,6 +133,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
         Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
         std::string send = "{\"server_ip\": \"";
         send += WiFi.localIP().toString().c_str();
+        send += "\", \"server_start_time\": \"";
+        send += start_time.c_str();
         send += "\", " + data.to_string(true);
         send += "}";
         Serial.printf("Sending: %s\n", send.c_str());
@@ -146,6 +153,57 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
     }
 }
 
+void setup_time()
+{
+    configTime(1 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    Serial.println("Waiting for time");
+
+    time_t now = 0;
+    // Even if not connected to NTP server, time is ticking.
+    // time function may not return 0 but some small value.
+    // If time is low we assume that we not read time from
+    // NTP server.
+    while (time(&now) < 60 * 60 * 24 * 90)
+    {
+        Serial.print(".");
+        delay(1000);
+    }
+    Serial.println("");
+
+    Serial.printf("Waiting for time %ld\n", now);
+    struct tm *time_struct = localtime(&now);
+
+    const int max = 128;
+    char time_buf[max] = {0};
+    strftime(time_buf, max, "%c", time_struct);
+
+    start_time = time_buf;
+}
+
+void setup_eeprom()
+{
+    EEPROM.begin(Data::max_data_size);
+
+    char buf[Data::max_data_size];
+    EEPROM.get(0, buf);
+    Serial.printf("Loading: %s\n", buf);
+    data.from_string(buf);
+    update_data();
+
+    strip.begin();
+    // This is called before WIFI is initialized, so we don't
+    // have time set, if timer is off then try to restore lights
+    // if timer if on then just initialize it.
+    if (data.timer())
+    {
+        strip.show();
+    }
+    else
+    {
+        handle_colors(/*initial*/ true);
+    }
+}
+
 void setup()
 {
     // put your setup code here, to run once:
@@ -153,8 +211,11 @@ void setup()
     Serial.println("\n Starting");
 
     pinMode(TRIGGER_HIGH_PIN, OUTPUT);
-    digitalWrite(TRIGGER_HIGH_PIN, HIGH);
     pinMode(TRIGGER_PIN, INPUT);
+
+    setup_eeprom();
+
+    digitalWrite(TRIGGER_HIGH_PIN, HIGH);
     if (digitalRead(TRIGGER_PIN) == LOW)
     {
         configureWiFi();
@@ -173,17 +234,6 @@ void setup()
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
 
-        EEPROM.begin(Data::max_data_size);
-
-        char buf[Data::max_data_size];
-        EEPROM.get(0, buf);
-        Serial.printf("Loading: %s\n", buf);
-        data.from_string(buf);
-        update_data();
-
-        strip.begin();
-        strip.show(); // Initialize all pixels to 'off'
-
         SPIFFS.begin();
 
         server.onNotFound([]() {
@@ -200,14 +250,7 @@ void setup()
             Serial.println("Error setting up MDNS responder!");
         }
 
-        configTime(1 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-        Serial.println("\nWaiting for time");
-        while (!time(nullptr))
-        {
-            Serial.print(".");
-            delay(1000);
-        }
-        Serial.println("");
+        setup_time();
 
         webSocket.begin();
         webSocket.onEvent(webSocketEvent);
@@ -235,9 +278,9 @@ void save_data()
     }
 }
 
-void handle_colors()
+void handle_colors(bool initial)
 {
-    if (colors(led_colors, data))
+    if (colors(led_colors, data, initial))
     {
         strip.setBrightness(data.brightness());
         for (uint16_t i = 0; i < strip.numPixels(); i++)
@@ -255,5 +298,4 @@ void loop()
 
     handle_colors();
     save_data();
-
 }

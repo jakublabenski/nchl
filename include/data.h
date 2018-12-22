@@ -13,6 +13,8 @@ enum class Mode : unsigned char
     YELLOW = 'Y',
     FLICKER_YELLOW = 'F',
     WHITE = 'W',
+    BLUE = 'L',
+    RED = 'D'
 };
 
 class Data
@@ -28,6 +30,11 @@ class Data
     uint8_t brightness() const
     {
         return brightness_ / 4;
+    }
+
+    bool timer() const
+    {
+        return timer_;
     }
 
     bool enabled(int hours, int minutes) const;

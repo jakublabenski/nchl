@@ -39,6 +39,9 @@ function connect() {
     if (data.type != null) {
       type = data.type;
     }
+    if (data.server_start_time != null) {
+      set_text(document.getElementById('server_start_time'), data.server_start_time);  
+    }
   };
   connection.onclose = function () {
     console.log('WebSocket connection closed');
@@ -47,13 +50,16 @@ function connect() {
   };
 }
 
-function set_server_ip(ip) {
-  var element = document.getElementById('server_ip');
+function set_server_ip(ip)
+{
+  set_text(document.getElementById('server_ip'), ip);
+}
 
+function set_text(element, text) {
   while (element.firstChild) {
     element.removeChild(element.firstChild);
   }
-  element.appendChild(document.createTextNode(ip));
+  element.appendChild(document.createTextNode(text));
 }
 
 connect();
@@ -66,6 +72,8 @@ var Type = {
   YELLOW: "Y",
   FLICKER_YELLOW: "F",
   WHITE: "W",
+  RED: "D",
+  BLUE: "L",
 };
 
 var type = Type.RAINBOW;
@@ -126,5 +134,15 @@ function switch_rgoby() {
 
 function switch_white() {
   type = Type.WHITE;
+  update();
+}
+
+function switch_red() {
+  type = Type.RED;
+  update();
+}
+
+function switch_blue() {
+  type = Type.BLUE;
   update();
 }

@@ -18,14 +18,18 @@
     </header>
     <div>
       <p style="margin:8px 0px">
-        Tryb:
+        Trybt:
         <button id="rainbow" class="button" style="background-color:#999" onclick="switch_rainbow();">Tęcza</button>
-        <button id="green" class="button" style="background-color:#999" onclick="switch_green();">Zielone</button>
-        <button id="white" class="button" style="background-color:#999" onclick="switch_white();">Białe</button>
-        <button id="yellow" class="button" style="background-color:#999" onclick="switch_yellow();">Żółte</button>
-        <button id="flicker_yellow" class="button" style="background-color:#999" onclick="switch_flicker_yellow();">Mrugające żółte</button>
         <button id="rgby" class="button" style="background-color:#999" onclick="switch_rgby();">RGBY</button>
         <button id="rgoby" class="button" style="background-color:#999" onclick="switch_rgoby();">RGOBY</button>
+        <button id="white" class="button" style="background-color:#999" onclick="switch_white();">Białe</button>
+      </p>
+      <p style="margin:8px 0px">
+        <button id="green" class="button" style="background-color:#999" onclick="switch_green();">Zielone</button>
+        <button id="red" class="button" style="background-color:#999" onclick="switch_red();">Czerwone</button>
+        <button id="blue" class="button" style="background-color:#999" onclick="switch_blue();">Niebieskie</button>
+        <button id="yellow" class="button" style="background-color:#999" onclick="switch_yellow();">Żółte</button>
+        <button id="flicker_yellow" class="button" style="background-color:#999" onclick="switch_flicker_yellow();">Mrugające żółte</button>
       </p>
       <p style="margin:8px 0px">
         <input type="checkbox" id="timer" onchange="timer_changed();">
@@ -40,6 +44,9 @@
       </p>
       <p style="margin:8px 0px">
         IP serwera: <span id="server_ip">niepołączony</span>
+      </p>
+      <p style="margin:8px 0px">
+        Start serwera: <span id="server_start_time"></span>
       </p>
     </div>
   </center>

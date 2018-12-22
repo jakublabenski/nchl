@@ -8,6 +8,6 @@
 
 using Colors = std::vector<uint32_t>;
 
-bool colors(Colors& out_colors, const Data& data);
+bool colors(Colors& out_colors, const Data& data, bool initial);
 
 #endif
