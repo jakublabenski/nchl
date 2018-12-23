@@ -27,8 +27,10 @@ Data data;
 Colors led_colors(number_of_leds);
 unsigned long needs_save = 0;
 std::string start_time;
+bool updated = false;
+bool enabled = true;
 
-void handle_colors(bool initial = false);
+void handle_colors(Mode mode);
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -118,6 +120,7 @@ void update_data()
         Colors new_colors(data.number_of_leds());
         led_colors.swap(new_colors);
     }
+    updated = true;
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
@@ -200,7 +203,7 @@ void setup_eeprom()
     }
     else
     {
-        handle_colors(/*initial*/ true);
+        handle_colors(data.mode());
     }
 }
 
@@ -278,16 +281,35 @@ void save_data()
     }
 }
 
-void handle_colors(bool initial)
+void update_strip()
 {
-    if (colors(led_colors, data, initial))
+    strip.setBrightness(data.brightness());
+    for (uint16_t i = 0; i < strip.numPixels(); i++)
     {
-        strip.setBrightness(data.brightness());
-        for (uint16_t i = 0; i < strip.numPixels(); i++)
-        {
-            strip.setPixelColor(i, led_colors[i]);
+        strip.setPixelColor(i, led_colors[i]);
+    }
+    strip.show();
+}
+
+void handle_colors(Mode mode)
+{
+    if (set_colors(led_colors, mode))
+    {
+        update_strip();
+    }
+}
+
+void handle_color_update(Mode mode)
+{
+    static unsigned long last_update = 0;
+    unsigned long loop_time = millis();
+
+    if (last_update == 0 || loop_time - last_update > data.change_dalay())
+    {
+        if (update_colors(led_colors, mode)) {
+            update_strip();
+            last_update = loop_time;
         }
-        strip.show();
     }
 }
 
@@ -296,6 +318,21 @@ void loop()
     server.handleClient();
     webSocket.loop();
 
-    handle_colors();
+    Mode mode = data.mode();
+    if (data.enabled_now()) {
+        updated = updated || !enabled;
+        enabled = true;
+    } else {
+        updated = updated || enabled;
+        enabled = false;
+        mode = Mode::DISABLE;
+    }
+
+    if (updated) {
+        handle_colors(mode);
+        updated = false;
+    } else {
+        handle_color_update(mode);
+    }
     save_data();
 }

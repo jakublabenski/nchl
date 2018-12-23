@@ -35,34 +35,25 @@ void setUpColors(Colors &colors, const ColorVector &set)
 
 bool handleYellowFlicker(Colors &out_colors)
 {
-    static unsigned long last_update = 0;
-
-    unsigned long loop_time = millis();
     double intensity = 0.5;
 
-    if (last_update == 0 || loop_time - last_update > 1000)
+    ColorVector c;
+    for (size_t i = 0; i < out_colors.size(); ++i)
     {
-        ColorVector c;
-        for (size_t i = 0; i < out_colors.size(); ++i)
-        {
-            int g = 20 + random(88, 99) * std::pow(intensity, 2);
-            int r = std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0);
-            c.emplace_back(
-                r, //std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0),
-                g, //random(88, 99) * std::pow(intensity, 2),
-                0);
-        }
-
-        //                std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0),
-        //                random(33, 44) * std::pow(intensity, 2),
-
-        setUpColors(out_colors, c);
-
-        last_update = loop_time;
-
-        return true;
+        int g = 20 + random(88, 99) * std::pow(intensity, 2);
+        int r = std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0);
+        c.emplace_back(
+            r, //std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0),
+            g, //random(88, 99) * std::pow(intensity, 2),
+            0);
     }
-    return false;
+
+    //                std::min(random(75, 100) * std::pow(intensity + 0.1, 0.75), 100.0),
+    //                random(33, 44) * std::pow(intensity, 2),
+
+    setUpColors(out_colors, c);
+
+    return true;
 }
 
 // Input a value 0 to 255 to get a color value.
@@ -94,38 +85,18 @@ void rainbowCycle(Colors &out_colors, uint16_t cycle)
 
 bool handleRanibow(Colors &out_colors)
 {
-    static unsigned long last_update = 0;
     static uint16_t cycle = 0;
 
-    unsigned long loop_time = millis();
+    rainbowCycle(out_colors, cycle);
+    cycle = (cycle + 1) % 256;
 
-    if (last_update == 0 || loop_time - last_update > 20)
-    {
-        rainbowCycle(out_colors, cycle);
-        cycle = (cycle + 1) % 256;
-        last_update = loop_time;
-
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 bool simpleColorHandler(Colors &out_colors, const ColorVector &colors)
 {
-    static unsigned long last_update = 0;
-
-    unsigned long loop_time = millis();
-
-    if (last_update == 0 || loop_time - last_update > 200)
-    {
-        setUpColors(out_colors, colors);
-
-        last_update = loop_time;
-
-        return true;
-    }
-    return false;
+    setUpColors(out_colors, colors);
+    return true;
 }
 
 } // namespace
@@ -135,23 +106,22 @@ uint32_t Color::toColor() const
     return ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
 }
 
-bool colors(Colors &out_colors, const Data &data, bool initial)
+bool update_colors(Colors &out_colors, Mode mode)
 {
-    if (!initial)
+    switch (mode)
     {
-        time_t now = time(nullptr);
-        struct tm *t = localtime(&now);
-
-        if (!data.enabled(t->tm_hour, t->tm_min))
-        {
-            ColorVector black = {
-                {0, 0, 0},
-            };
-            return simpleColorHandler(out_colors, black);
-        }
+    case Mode::RAINBOW:
+        return handleRanibow(out_colors);
+    case Mode::FLICKER_YELLOW:
+        return handleYellowFlicker(out_colors);
+    default:
+        return false;
     }
+}
 
-    switch (data.mode())
+bool set_colors(Colors &out_colors, Mode mode)
+{
+    switch (mode)
     {
     case Mode::RGBY:
     {
@@ -178,13 +148,12 @@ bool colors(Colors &out_colors, const Data &data, bool initial)
     {
         ColorVector c = {
             {248, 222, 26},
-            {250, 218, 94},
+            {250, 218, 34},
             {249, 166, 2},
             {255, 211, 0},
             {252, 244, 63},
             {252, 226, 5},
-            {255, 253, 88},
-            {239, 253, 95},
+            {255, 253, 68},
         };
         return simpleColorHandler(out_colors, c);
     }
@@ -217,6 +186,13 @@ bool colors(Colors &out_colors, const Data &data, bool initial)
     {
         ColorVector c = {
             {255, 0, 0},
+        };
+        return simpleColorHandler(out_colors, c);
+    }
+    case Mode::DISABLE:
+    {
+        ColorVector c = {
+            {0, 0, 0},
         };
         return simpleColorHandler(out_colors, c);
     }

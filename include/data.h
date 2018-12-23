@@ -14,7 +14,8 @@ enum class Mode : unsigned char
     FLICKER_YELLOW = 'F',
     WHITE = 'W',
     BLUE = 'L',
-    RED = 'D'
+    RED = 'D',
+    DISABLE = 'X'
 };
 
 class Data
@@ -39,6 +40,8 @@ class Data
 
     bool enabled(int hours, int minutes) const;
 
+    bool enabled_now() const;
+
     void from_string(const std::string &);
     std::string to_string(bool as_keys) const;
 
@@ -46,11 +49,17 @@ class Data
     {
         return number_of_leds_;
     }
+
+    uint16_t change_dalay() const
+    {
+        return change_dalay_;
+    }
   private:
     std::string start_time_;
     std::string stop_time_;
     uint32_t brightness_ = 512U;
     uint16_t number_of_leds_ = 50;
+    uint16_t change_dalay_ = 20;
     Mode mode_ = Mode::RAINBOW;
     bool timer_ = false;
 };

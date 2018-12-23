@@ -8,7 +8,7 @@ function connect() {
   connection = new WebSocket('ws://' + location.hostname + ':81/');
 
   connection.onopen = function () {
-    connection.send('Connect ' + new Date());
+    connection.send('{"Connect": "' + new Date() + '"}');
   };
   connection.onerror = function (error) {
     console.log('WebSocket Error ', error);
@@ -35,6 +35,9 @@ function connect() {
     }
     if (data.number_of_leds != null) {
       document.getElementById('number_of_leds').value = data.number_of_leds;  
+    }
+    if (data.change_delay != null) {
+      document.getElementById('change_delay').value = data.change_delay;  
     }
     if (data.type != null) {
       type = data.type;
@@ -86,6 +89,7 @@ function update() {
     type: type,
     brightness: parseInt(document.getElementById('brightness').value, 10),
     number_of_leds: parseInt(document.getElementById('number_of_leds').value, 10),
+    change_delay: parseInt(document.getElementById('change_delay').value, 10),
   });
   console.log('WebSocket sending ' + payload);
   connection.send(payload);
