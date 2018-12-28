@@ -193,6 +193,10 @@ bool Data::enabled(int hours, int minutes) const
 
 bool Data::enabled_now() const
 {
+    if (!enabled_)
+    {
+        return false;
+    }
     if (!timer_)
     {
         return true;
@@ -236,6 +240,9 @@ void Data::from_string(const std::string &p)
         return;
     }
 
+    bool new_enabled = true;
+    read_bool(object, "enabled", new_enabled);
+
     bool new_timer = false;
     if (!read_bool(object, "timer", new_timer))
     {
@@ -272,6 +279,7 @@ void Data::from_string(const std::string &p)
     }
 
     brightness_ = new_brightness;
+    enabled_ = new_enabled;
     timer_ = new_timer;
     start_time_ = new_start_time;
     stop_time_ = new_stop_time;
@@ -282,6 +290,7 @@ void Data::from_string(const std::string &p)
 std::string Data::to_string(bool as_keys) const
 {
     char buf[max_data_size];
+    // enabled_ is not stored or used
     snprintf(buf, max_data_size,
              "\"brightness\": %u, \"type\": \"%c\", \"timer\": %s,"
              "\"start_time\": \"%s\", \"stop_time\": \"%s\","

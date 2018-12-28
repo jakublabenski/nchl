@@ -32,6 +32,9 @@
         <button id="flicker_yellow" class="button" style="background-color:#999" onclick="switch_flicker_yellow();">Mrugające żółte</button>
       </p>
       <p style="margin:8px 0px">
+        <input type="checkbox" id="enabled" onchange="update();" checked>Włączone
+      </p>
+      <p style="margin:8px 0px">
         <input type="checkbox" id="timer" onchange="timer_changed();">
         Timer: włącz o <input type="time" onchange="timer_changed();" autocomplete id="start_time">
               wyłącz o <input type="time" onchange="timer_changed();" autocomplete id="stop_time">
@@ -46,9 +49,7 @@
         Liczba światełek: <input id="number_of_leds" type="number" min="1" max="250" oninput="update();" />
       </p>
       <p style="margin:8px 0px">
-        IP serwera: <span id="server_ip">niepołączony</span>
-      </p>
-      <p style="margin:8px 0px">
+        IP serwera: <span id="server_ip">niepołączony</span>, 
         Start serwera: <span id="server_start_time"></span>
       </p>
     </div>

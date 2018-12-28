@@ -23,6 +23,9 @@ function connect() {
     if (data.brightness != null) {
       document.getElementById('brightness').value = data.brightness;
     }
+    if (data.enabled != null) {
+      document.getElementById('enabled').checked = data.enabled;
+    }
     if (data.timer != null) {
       document.getElementById('timer').checked = data.timer;
       update_timer();
@@ -90,6 +93,7 @@ function update() {
     brightness: parseInt(document.getElementById('brightness').value, 10),
     number_of_leds: parseInt(document.getElementById('number_of_leds').value, 10),
     change_delay: parseInt(document.getElementById('change_delay').value, 10),
+    enabled: document.getElementById('enabled').checked,
   });
   console.log('WebSocket sending ' + payload);
   connection.send(payload);

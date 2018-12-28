@@ -62,6 +62,7 @@ class Data
     uint16_t change_dalay_ = 20;
     Mode mode_ = Mode::RAINBOW;
     bool timer_ = false;
+    bool enabled_ = true;
 };
 
 #endif
